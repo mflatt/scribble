@@ -2,6 +2,7 @@
 (require "core.rkt"
          "private/provide-structs.rkt"
          "decode-struct.rkt"
+         "manual-struct.rkt"
          racket/contract/base
          racket/contract/combinator
          racket/list)
@@ -52,6 +53,7 @@
  [splice ([run list?])]
  [part-index-decl ([plain-seq (listof string?)]
                    [entry-seq list?])]
+ [(part-index-decl* part-index-decl) ([desc index-desc?])]
  [part-collect-decl ([element (or/c element? part-relative-element?)])]
  [part-tag-decl ([tag tag?])])
 
@@ -92,7 +94,12 @@
 (provide/contract
  [spliceof (flat-contract? . -> . flat-contract?)])
 
-(define the-part-index-desc (make-part-index-desc))
+(define the-part-index-desc (index-desc (hash 'kind "part"
+                                              'part? #t)))
+
+(provide/contract
+ [decode-current-language-family (parameter/c (or/c #f (listof string?)))])
+(define decode-current-language-family (make-parameter #f))
 
 (define (clean-up-index-string s)
   ;; Collapse whitespace, and remove leading or trailing spaces, which
@@ -163,7 +170,8 @@
                            (make-index-element #f null tag
                                                (part-index-decl-plain-seq k)
                                                (part-index-decl-entry-seq k)
-                                               #f))
+                                               (and (part-index-decl*? k)
+                                                    (part-index-decl*-desc k))))
                          keys k-tags)
                      colls)])
             (if (and title
@@ -175,7 +183,12 @@
                             (regexp-replace #px"^\\s+(?:(?:A|An|The)\\s)?"
                                             (content->string title) "")))
                      (list (make-element #f title))
-                     the-part-index-desc)
+                     (let ([fam (decode-current-language-family)])
+                       (if (not fam)
+                           the-part-index-desc
+                           (index-desc
+                            (hash-set (index-desc-extras the-part-index-desc)
+                                      'language-family fam)))))
                     l)
               l))
           (decode-accum-para accum)

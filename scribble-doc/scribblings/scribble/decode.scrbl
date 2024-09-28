@@ -1,5 +1,7 @@
 #lang scribble/doc
-@(require scribble/manual "utils.rkt")
+@(require scribble/manual
+          "utils.rkt"
+          (for-label (only-in scribble/manual-struct index-desc)))
 
 @title[#:tag "decode"]{Decoding Text}
 
@@ -97,7 +99,7 @@ flow-element datatypes are used as-is in the enclosing flow.
 As a part is decoded, as long as the style for the part does not
 include the @tech{style property} @racket['hidden] or
 @racket['no-index], an entry is added to the document index for the
-part's title.
+part's title. See also @racket[decode-current-language-family].
 
 Portions of @racket[lst] are within a part are decoded using
 @racket[decode-flow].
@@ -208,6 +210,14 @@ Like @racket[title-decl], but for a sub-part.  See @racket[decode] and
 See @racket[decode]. The two fields are as for @racket[index-element].}
 
 
+@defstruct[(part-index-decl* part-index-decl) ([desc index-desc?])]{
+
+Like @racket[part-index-decl], but adds a index-entry description to be propagated
+to the created @racket[index-element].
+
+@history[#:added "1.54"]}
+
+
 @defstruct[part-collect-decl ([element (or/c element? part-relative-element?)])]{
 
 See @racket[decode].}
@@ -233,3 +243,15 @@ Produces a contract for a @racket[splice] instance whose
 
 Trims leading and trailing whitespace, and converts non-empty
 sequences of whitespace to a single space character.}
+
+
+@defparam[decode-current-language-family family (parameter/c (or/c #f (listof string?)))
+          #:value #f]{
+
+A parameter that determines how @racket[decode] creates index entries
+for document parts. If the parameter value is @racket[#f], no language
+family is associated, otherwise the parameter's value is used for the
+@racket['language-family] entry description. See also
+@racket[index-desc].
+
+@history[#:added "1.54"]}
