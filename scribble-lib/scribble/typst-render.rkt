@@ -24,6 +24,9 @@
   (indent))
 
 (define in-link? (make-parameter #f))
+;; True while rendering content within a table cell, so that a nested
+;; table can adjust its alignment:
+(define in-table-cell? (make-parameter #f))
 ;; True while rendering content whose spacing and characters should
 ;; be kept verbatim, such as code: spaces are converted to
 ;; non-breaking spaces, and ligature-like substitutions (quotes and
@@ -552,6 +555,13 @@
          (when wrap-fill
            (printf "#block(width: 100%, fill: rgb(\"~a\"), inset: 3pt)[\n" wrap-fill))
          (define cell-styless (extract-table-cell-styles i))
+         ;; For a nested table in a `top'-aligned cell, remove the
+         ;; top inset of the table's first row, so that the top
+         ;; edge of the row's text (instead of the top edge of the
+         ;; table) aligns with the text of sibling cells --- which
+         ;; approximates the way that a `tabular[t]' environment in
+         ;; Latex output aligns on the first row's baseline:
+         (define nested? (in-table-cell?))
          (printf "#table(\n")
          (indent)
          (printf "  columns: ~a,\n" (length (car flowss)))
@@ -560,7 +570,8 @@
          (indent)
          (printf "  inset: (x: 0pt, y: 0.25em),\n")
          (for ([row (in-list flowss)]
-               [styles (in-list cell-styless)])
+               [styles (in-list cell-styless)]
+               [row-i (in-naturals)])
            (indent)
            (printf "  ")
            (let loop ([row row] [styles styles])
@@ -580,6 +591,7 @@
                   (define props (style-properties (car styles)))
                   (define opts
                     (append
+                     (if (and nested? (zero? row-i)) (list "inset: (top: 0pt)") null)
                      (if (cnt . > . 1) (list (format "colspan: ~a" cnt)) null)
                      (let ([horiz (cond
                                     [(memq 'right props) "right"]
@@ -610,7 +622,8 @@
                       (printf "table.cell(~a)[" (string-join opts ", ")))
                   (define o (open-output-string))
                   (parameterize ([current-indent 0]
-                                 [current-output-port o])
+                                 [current-output-port o]
+                                 [in-table-cell? #t])
                     (render-block d part ri #f))
                   (let ([s (regexp-replace #rx"\n+$" (get-output-string o) "")])
                     ;; A non-breaking space keeps an all-blank row
