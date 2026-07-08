@@ -10,7 +10,8 @@
          (prefix-in text: scribble/text-render)
          (prefix-in html: scribble/html-render)
          (prefix-in latex: scribble/latex-render)
-         (prefix-in markdown: scribble/markdown-render))
+         (prefix-in markdown: scribble/markdown-render)
+         (prefix-in typst: scribble/typst-render))
 
 (define-runtime-path source-dir "docs")
 (define work-dir (build-path (find-system-path 'temp-dir)
@@ -43,6 +44,9 @@
 
 (define (build-markdown-doc src-file dest-file)
   (build-doc (markdown:render-mixin render%) src-file dest-file))
+
+(define (build-typst-doc src-file dest-file)
+  (build-doc (typst:render-mixin render%) src-file dest-file))
 
 (provide docs-tests)
 (module+ main (docs-tests))
@@ -79,5 +83,6 @@
           (void (build-html-doc src-file "gen.html"))
           (void (build-htmls-doc src-file "gen"))
           (void (build-latex-doc src-file "gen.tex"))
-          (void (build-markdown-doc src-file "gen.md")))))
+          (void (build-markdown-doc src-file "gen.md"))
+          (void (build-typst-doc src-file "gen.typ")))))
     (λ() (delete-directory/files work-dir))))

@@ -7,6 +7,7 @@
          (prefix-in markdown: "markdown-render.rkt")
          (prefix-in html:     "html-render.rkt")
          (prefix-in latex:    "latex-render.rkt")
+         (prefix-in typst:    "typst-render.rkt")
          (prefix-in pdf:      "pdf-render.rkt")
          compiler/cm)
 
@@ -68,9 +69,15 @@
    [("--latex") "generate LaTeX-format output"
     (current-html #f)
     (current-render-mixin latex:render-mixin)]
+   [("--typst") "generate Typst-format output"
+    (current-html #f)
+    (current-render-mixin typst:render-mixin)]
    [("--pdf") "generate PDF-format output (via PDFLaTeX)"
     (current-html #f)
     (current-render-mixin pdf:render-mixin)]
+   [("--typst-pdf") "generate PDF-format output (via Typst)"
+    (current-html #f)
+    (current-render-mixin pdf:typst-render-mixin)]
    [("--xelatex") "generate PDF-format output (via XeLaTeX)"
     (current-html #f)
     (current-render-mixin pdf:xelatex-render-mixin)]

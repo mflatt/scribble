@@ -5,7 +5,8 @@
   [text "Text!"]
   [html "HTML!"]
   [latex "Latex!"]
-  [markdown "Markdown!"])
+  [markdown "Markdown!"]
+  [typst "Typst!"])
 
 @(cond-element
   [(or text html) "Text or HTML!"]

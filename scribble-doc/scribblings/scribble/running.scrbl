@@ -58,6 +58,12 @@ its file suffix:
  @item{@DFlag{markdown} --- Markdown text in a single file
        @filepath{@|fn|.md}, with non-ASCII content encoded as UTF-8}
 
+ @item{@DFlag{typst} --- Typst source @filepath{@|fn|.typ}, plus any
+       needed image files}
+
+ @item{@DFlag{typst-pdf} --- PDF @filepath{@|fn|.pdf} that is
+       generated via @exec{typst}}
+
 ]
 
 Use @DFlag{dest-name} to specify a @|fn| other than the default name,
@@ -90,7 +96,8 @@ documents that are built separately.
          #:changed "1.40" @elem{Added @DFlag{keep-at-dest-base} and
                                 fixed @DFlag{dest-base} to work correctly
                                 for HTML output.}
-         #:changed "1.45" @elem{Added @DFlag{lualatex}.}]
+         #:changed "1.45" @elem{Added @DFlag{lualatex}.}
+         #:changed "1.66" @elem{Added @DFlag{typst} and @DFlag{typst-pdf}.}]
 
 @section{Extra and Format-Specific Files}
 
@@ -99,7 +106,10 @@ the output style file for certain formats. For HTML (single-page or
 multi-page) output, the style file should be a CSS file that is
 applied after all other CSS files, and that may therefore override
 some style properties. For Latex (or PDF) output, the style file
-should be a @filepath{.tex} file that can redefine Latex commands.
+should be a @filepath{.tex} file that can redefine Latex commands. For
+Typst output, the style file should be a @filepath{.typ} file whose
+content is included after the prefix file, so it can override
+@tt{set} and @tt{show} rules from the prefix.
 When a particular Scribble function needs particular CSS or Latex
 support, however, a better option is to use a @racket[css-addition] or
 @racket[tex-addition] style property so that the support is included
@@ -123,7 +133,10 @@ the output file. For HTML output, the starting file specifies the
 collection. For Latex (or PDF) output (but not Latex-section output), the starting file specifies
 the @ltx{documentclass} declaration and initial @ltx{usepackage}
 declarations as a substitute for @filepath{scribble-prefix.tex} in the
-@filepath{scribble} collection. See also @racket[html-defaults],
+@filepath{scribble} collection. For Typst output, the starting file
+specifies document-level @tt{set} rules as a substitute for
+@filepath{scribble-prefix.typ} in the @filepath{scribble}
+collection. See also @racket[html-defaults],
 @racket[latex-defaults], and @secref["config"].
 
 For any output form, use the @DPFlag{extra} flag to add a needed file

@@ -121,7 +121,8 @@ current error port.
 @racketmodname[scribble/base-render] module provides @racket[render%],
 which implements the core of a renderer. This rendering class must be
 refined with a mixin from @racketmodname[scribble/text-render],
-@racketmodname[scribble/markdown-render], or
+@racketmodname[scribble/markdown-render],
+@racketmodname[scribble/typst-render],
 @racketmodname[scribble/html-render], or
 @racketmodname[scribble/latex-render].}
 
@@ -642,6 +643,29 @@ rendered as a section link. The default is @racket[#f].
 
 @; ----------------------------------------
 
+@section{Typst Renderer}
+
+@defmodule/local[scribble/typst-render]{
+
+@defmixin[render-mixin (render<%>) ()]{
+
+Specializes a @racket[render<%>] class for generating
+@hyperlink["https://typst.app/docs/"]{Typst} source. The generated
+source is self-contained, so rendering does not require a @exec{typst}
+executable, but compiling the generated source to PDF requires
+one.
+
+Code is rendered using Typst's @tt{raw} form with @tt{racket} as the
+language, so it is lexed and formatted as Racket code. Hyperlinks
+within the document are rendered as Typst labels and references to
+labels, and section titles include section numbers (as computed by
+Scribble) as literal text, instead of using Typst's heading-numbering
+support.
+
+@history[#:added "1.66"]}}
+
+@; ----------------------------------------
+
 @section{HTML Renderer}
 
 @defmodule/local[scribble/html-render]{
@@ -751,6 +775,14 @@ Like @racket[render-mixin], but generates PDF output via @exec{xelatex}.
 Like @racket[render-mixin], but generates PDF output via @exec{lualatex}.
 
 @history[#:added "1.45"]}
+
+@defmixin[typst-render-mixin (render<%>) ()]{
+
+Like @racket[render-mixin], but generates PDF output via @exec{typst},
+building on @racket[render-mixin] from
+@racketmodname[scribble/typst-render].
+
+@history[#:added "1.66"]}
 
 @; ----------------------------------------
 
