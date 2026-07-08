@@ -2,6 +2,7 @@
 (require "core.rkt"
          "base-render.rkt"
          "private/render-utils.rkt"
+         "typst-properties.rkt"
          racket/class
          racket/port
          racket/list
@@ -32,8 +33,8 @@
 (define typst-part-tag 'typst-section)
 
 (define-runtime-path scribble-prefix-typ "scribble-prefix.typ")
+(define-runtime-path scribble-typ "scribble.typ")
 (define-runtime-path scribble-style-typ "scribble-style.typ")
-(define-runtime-path racket-typ "racket.typ")
 
 ;; Styles (from "racket.rkt") that have a corresponding function
 ;; definition in "racket.typ":
@@ -112,7 +113,8 @@
              extract-version
              extract-date
              extract-authors
-             extract-pretitle-content)
+             extract-pretitle-content
+             extract-part-style-files)
 
     (define image-reqs
       (sort-image-requests '(svg-bytes png@2x-bytes png-bytes pdf-bytes)
@@ -131,7 +133,7 @@
     (define/private (emit-anchor lbl)
       (unless (hash-ref emitted-labels lbl #f)
         (hash-set! emitted-labels lbl #t)
-        (printf "#metadata(none) <~a>" lbl)))
+        (printf "#metadata(none)<~a>" lbl)))
 
     ;; ----------------------------------------
     ;; collect
@@ -150,57 +152,85 @@
     ;; render
 
     (define/override (render-one d ri fn)
-      (define (copy-file-to-output file)
-        (if (bytes? file)
-            (display file)
-            (with-input-from-file file
-              (lambda ()
-                (copy-port (current-input-port) (current-output-port))))))
-      (copy-file-to-output (or prefix-file scribble-prefix-typ))
-      (copy-file-to-output racket-typ)
-      (copy-file-to-output (or style-file scribble-style-typ))
-      (for ([style-file (in-list style-extra-files)])
-        (copy-file-to-output style-file))
-      (define title-content (part-title-content d))
-      (define title-str (and title-content (content->string title-content this d ri)))
-      (when (and title-str (not (equal? title-str "")))
-        (printf "#set document(title: \"~a\")\n" (typst-string-escape title-str)))
-      (newline)
-      (when (and title-content
-                 (not (and (part-style? d 'hidden)
-                           (equal? "" title-str))))
-        (let ([vers (extract-version d)]
-              [date (extract-date d)]
-              [auths (extract-authors d)]
-              [pres (extract-pretitle-content d)])
-          (for ([pre (in-list pres)])
+      (define defaults (ormap (lambda (v) (and (typst-defaults? v) v))
+                              (style-properties (part-style d))))
+      (let* ([prefix-file (or prefix-file
+                              (and defaults
+                                   (let ([v (typst-defaults-prefix defaults)])
+                                     (cond
+                                       [(bytes? v) v]
+                                       [else (collects-relative->path v)])))
+                              scribble-prefix-typ)]
+             [style-file (or style-file
+                             (and defaults
+                                  (let ([v (typst-defaults-style defaults)])
+                                    (cond
+                                      [(bytes? v) v]
+                                      [else (collects-relative->path v)])))
+                             scribble-style-typ)]
+             [all-style-files (list* prefix-file
+                                     scribble-typ
+                                     style-file
+                                     (append (extract-part-style-files
+                                              d
+                                              ri
+                                              (lambda (p) #f)
+                                              typ-addition?
+                                              typ-addition-path)
+                                             (list style-file)
+                                             style-extra-files))])
+        (define (copy-file-to-output file)
+          (if (bytes? file)
+              (display file)
+              (with-input-from-file file
+                (lambda ()
+                  (copy-port (current-input-port) (current-output-port))))))
+        (for ([style-file (in-list all-style-files)])
+          (if (bytes? style-file)
+              (display style-file)
+              (with-input-from-file style-file
+                (lambda ()
+                  (copy-port (current-input-port) (current-output-port))))))
+        (define title-content (part-title-content d))
+        (define title-str (and title-content (content->string title-content this d ri)))
+        (when (and title-str (not (equal? title-str "")))
+          (printf "#set document(title: \"~a\")\n" (typst-string-escape title-str)))
+        (newline)
+        (when (and title-content
+                   (not (and (part-style? d 'hidden)
+                             (equal? "" title-str))))
+          (let ([vers (extract-version d)]
+                [date (extract-date d)]
+                [auths (extract-authors d)]
+                [pres (extract-pretitle-content d)])
+            (for ([pre (in-list pres)])
+              (newline)
+              (cond
+                [(paragraph? pre) (do-render-paragraph pre d ri #t)]
+                [(nested-flow? pre) (do-render-nested-flow pre d ri #f #t)]))
+            (printf "#align(center)[#text(1.8em, weight: \"bold\")[")
+            (render-content title-content d ri)
+            (printf "]]\n")
+            (unless (equal? vers "")
+              (printf "#align(center)[#text(1.1em)[Version ~a]]\n" (typst-escape vers)))
+            (for ([auth (in-list auths)])
+              (printf "#align(center)[")
+              (do-render-paragraph auth d ri #t)
+              (printf "]\n"))
+            (when date
+              (printf "#align(center)[~a]\n" (typst-escape date)))
+            (newline)))
+        (render-part d ri)
+        ;; Add anchors for any referenced-but-never-emitted labels, so
+        ;; that no `#link' in the document can fail to resolve:
+        (let ([missing (sort (for/list ([lbl (in-hash-keys linked-labels)]
+                                        #:unless (hash-ref emitted-labels lbl #f))
+                               lbl)
+                             string<?)])
+          (unless (null? missing)
             (newline)
-            (cond
-              [(paragraph? pre) (do-render-paragraph pre d ri #t)]
-              [(nested-flow? pre) (do-render-nested-flow pre d ri #f #t)]))
-          (printf "#align(center)[#text(1.8em, weight: \"bold\")[")
-          (render-content title-content d ri)
-          (printf "]]\n")
-          (unless (equal? vers "")
-            (printf "#align(center)[#text(1.1em)[Version ~a]]\n" (typst-escape vers)))
-          (for ([auth (in-list auths)])
-            (printf "#align(center)[")
-            (do-render-paragraph auth d ri #t)
-            (printf "]\n"))
-          (when date
-            (printf "#align(center)[~a]\n" (typst-escape date)))
-          (newline)))
-      (render-part d ri)
-      ;; Add anchors for any referenced-but-never-emitted labels, so
-      ;; that no `#link' in the document can fail to resolve:
-      (let ([missing (sort (for/list ([lbl (in-hash-keys linked-labels)]
-                                      #:unless (hash-ref emitted-labels lbl #f))
-                             lbl)
-                           string<?)])
-        (unless (null? missing)
-          (newline)
-          (for ([lbl (in-list missing)])
-            (printf "#metadata(none) <~a>\n" lbl)))))
+            (for ([lbl (in-list missing)])
+              (printf "#metadata(none) <~a>\n" lbl))))))
 
     (define/override (render-part-content d ri)
       (define number (collected-info-number (part-collected-info d ri)))
@@ -401,6 +431,8 @@
         [(eq? sn 'newline)
          (display "#linebreak()")
          null]
+        #;
+        [(string? sn) (wrap (string-append "#" sn "[") "]")]
         [else (super render-content e part ri)]))
 
     ;; ----------------------------------------
@@ -522,7 +554,7 @@
          (indent)
          (printf "  stroke: none,\n")
          (indent)
-         (printf "  inset: (x: 2pt, y: 1.5pt),\n")
+         (printf "  inset: (x: 0pt, y: 0.25em),\n")
          (for ([row (in-list flowss)]
                [styles (in-list cell-styless)])
            (indent)

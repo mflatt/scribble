@@ -1,6 +1,7 @@
 #lang racket/base
 (require "../html-properties.rkt"
          "../latex-properties.rkt"
+         "../typst-properties.rkt"
          "on-demand.rkt"
          setup/collects)
 
@@ -10,4 +11,5 @@
   (let ([abs (lambda (s)
                (path->collects-relative (collection-file-path s "scribble")))])
     (list (make-css-addition (abs "racket.css"))
-          (make-tex-addition (abs "racket.tex")))))
+          (make-tex-addition (abs "racket.tex"))
+          (make-typ-addition (abs "racket.typ")))))

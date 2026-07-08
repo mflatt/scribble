@@ -2167,3 +2167,29 @@ arguments to the element's command in Latex output.}
 
  @history[#:added "1.33"]
 }
+
+@; ----------------------------------------
+
+@section{Typst Style Properties}
+
+@defmodule[scribble/typst-properties]{ The
+@racket[scribble/latex-properties] library provides datatypes used as
+@tech{style properties} for Typst rendering.}
+
+@history[#:added "1.66"]
+
+@defstruct[typ-addition ([path (or/c path-string? 
+                                     (cons/c 'collects (listof bytes?))
+                                     bytes?)])]{
+
+Like @racket[tex-addition], but for Typst output.}
+
+
+@defstruct[typst-defaults ([prefix (or/c bytes? path-string? 
+                                         (cons/c 'collects (listof bytes?)))]
+                           [style (or/c bytes? path-string? 
+                                        (cons/c 'collects (listof bytes?)))]
+                           [extra-files (listof (or/c path-string? 
+                                                      (cons/c 'collects (listof bytes?))))])]{
+
+Like @racket[latex-defaults], but for Typst output.}

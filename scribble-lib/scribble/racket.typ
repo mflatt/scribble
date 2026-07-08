@@ -3,7 +3,7 @@
 // the prefix file and before any style files, so a style file (as
 // supplied with the `--style` or `++style` flags) can shadow these
 // definitions with new `#let` bindings.
-#let Stt(body) = text(font: ("DejaVu Sans Mono",), body)
+#let Stt(body) = text(font: ("DejaVu Sans Mono",), size: 9pt, body)
 #let RktPlain(body) = Stt(body)
 #let RktBlk(body) = Stt(body)
 #let RktIn(body) = highlight(fill: rgb("#eeeeee"), Stt(text(fill: rgb("#cc6633"), body)))
