@@ -90,6 +90,63 @@
     [(string? c) (if (member c typst-color-names) c "black")]
     [else (format "rgb(~a, ~a, ~a)" (car c) (cadr c) (caddr c))]))
 
+;; Typst rejects an SVG image that declares a zero width or height,
+;; so rewrite each zero dimension --- in the root tag's attributes
+;; and its "viewBox" --- to 1, and report the growth in points so
+;; that the image's layout size can be adjusted to compensate;
+;; returns the (possibly updated) SVG bytes and either #f or an
+;; inset-adjustment string like "bottom: -0.75pt":
+(define (patch-zero-size-svg bs)
+  (define (svg-unit->pt u)
+    (cond
+      [(or (equal? u #"") (equal? u #"px")) 0.75]
+      [(equal? u #"pt") 1]
+      [(equal? u #"pc") 12]
+      [(equal? u #"mm") 2.834646]
+      [(equal? u #"cm") 28.34646]
+      [(equal? u #"in") 72]
+      [else 0.75]))
+  (define m (regexp-match-positions #rx#"<svg[^>]*>" bs))
+  (cond
+    [(not m) (values bs #f)]
+    [else
+     (define tag (subbytes bs (caar m) (cdar m)))
+     ;; Replace a zero `width' or `height' attribute with 1 (in the
+     ;; same unit), and return the growth in points:
+     (define (patch-dim tag which)
+       (define rx (byte-pregexp (bytes-append which #"=\"([0-9.eE+-]+)([a-z%]*)\"")))
+       (define dim (regexp-match rx tag))
+       (cond
+         [(and dim (zero? (string->number (bytes->string/utf-8 (cadr dim)))))
+          (values (regexp-replace rx tag (bytes-append which #"=\"1" (caddr dim) #"\""))
+                  (svg-unit->pt (caddr dim)))]
+         [else (values tag #f)]))
+     ;; Replace a zero width or height in a `viewBox' attribute with
+     ;; 1, so that it stays consistent with the patched dimensions:
+     (define (patch-viewbox tag)
+       (define rx #px#"(viewBox=\"[0-9.eE+-]+[ ,]+[0-9.eE+-]+[ ,]+)([0-9.eE+-]+)([ ,]+)([0-9.eE+-]+)(\")")
+       (define vb (regexp-match rx tag))
+       (define (nonzero n) (if (zero? (string->number (bytes->string/utf-8 n))) #"1" n))
+       (cond
+         [vb (regexp-replace rx tag (bytes-append (cadr vb)
+                                                  (nonzero (caddr vb))
+                                                  (cadddr vb)
+                                                  (nonzero (list-ref vb 4))
+                                                  (list-ref vb 5)))]
+         [else tag]))
+     (define-values (w-tag trim-w) (patch-dim tag #"width"))
+     (define-values (h-tag trim-h) (patch-dim w-tag #"height"))
+     (cond
+       [(or trim-w trim-h)
+        (values (bytes-append (subbytes bs 0 (caar m))
+                              (patch-viewbox h-tag)
+                              (subbytes bs (cdar m)))
+                (string-append*
+                 (append (if trim-w (list (format "right: -~apt" trim-w)) null)
+                         (if (and trim-w trim-h) '(", ") null)
+                         (if trim-h (list (format "bottom: -~apt" trim-h)) null))))]
+       [else (values bs #f)])]))
+
 (define-struct (toc-paragraph paragraph) ())
 
 (define (render-mixin %)
@@ -445,13 +502,16 @@
     ;; images
 
     ;; Wrapping `image' in `box' makes it suitable for inline
-    ;; contexts, and it stays a single unit in block contexts:
-    (define/private (render-image fn scale width)
+    ;; contexts, and it stays a single unit in block contexts; a
+    ;; `#:trim' inset adjustment compensates for a dimension that
+    ;; was added by `patch-zero-size-svg':
+    (define/private (render-image fn scale width #:trim [trim #f])
       (define img
         (format "image(\"~a\"~a)"
                 (typst-string-escape (if (path? fn) (path->string fn) fn))
                 (if width (format ", width: ~apt" width) "")))
-      (printf "#box(~a)"
+      (printf "#box(~a~a)"
+              (if trim (format "inset: (~a), " trim) "")
               (if (and scale (not (= scale 1)))
                   (format "scale(x: ~a%, y: ~a%, reflow: true, ~a)"
                           (exact->inexact (* 100 scale))
@@ -465,8 +525,8 @@
           [(svg-bytes)
            (let ([v (convert e 'svg-bytes)])
              (and v
-                  (begin
-                    (render-image (install-file "pict.svg" v) #f #f)
+                  (let-values ([(v trim) (patch-zero-size-svg v)])
+                    (render-image (install-file "pict.svg" v) #f #f #:trim trim)
                     #t)))]
           [(png@2x-bytes)
            (let ([v (convert e 'png@2x-bytes+bounds8)])
