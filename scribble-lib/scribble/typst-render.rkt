@@ -36,8 +36,10 @@
 (define-runtime-path scribble-typ "scribble.typ")
 (define-runtime-path scribble-style-typ "scribble-style.typ")
 
-;; Styles (from "racket.rkt") that have a corresponding function
-;; definition in "racket.typ":
+;; Code-token styles (from "racket.rkt") that have a corresponding
+;; function definition in "racket.typ" and whose content should be
+;; rendered with verbatim spacing; other string style names are
+;; also rendered as function calls, but without verbatim spacing:
 (define rkt-style-names
   '("RktPlain" "RktBlk" "RktIn" "RktInBG" "RktRdr" "RktPn" "RktMeta"
     "RktMod" "RktKw" "RktOpt" "RktErr" "RktVar" "RktSym" "RktSymDef"
@@ -46,10 +48,11 @@
 
 ;; Escape a string for use in Typst markup mode. The escaped set
 ;; covers all characters that are (or can be) markup-significant;
-;; parentheses are included because an open parenthesis immediately
-;; after an embedded code expression would be parsed as a call.
+;; parentheses and `.` are included because, immediately after an
+;; embedded code expression, an open parenthesis would be parsed as
+;; a function call and a `.` as a field access.
 (define (typst-escape s)
-  (regexp-replace* #rx"[][()\\{}#$*`@<>/~'\"=+_-]" s "\\\\&"))
+  (regexp-replace* #rx"[][()\\{}#$*`@<>/~'\".=+_-]" s "\\\\&"))
 
 ;; Escape a string for use inside a Typst string literal:
 (define (typst-string-escape s)

@@ -27,3 +27,16 @@
 #let RktCmt(body) = Stt(text(fill: rgb("#c2741f"), body))
 #let RktVal(body) = Stt(text(fill: rgb("#228b22"), body))
 #let highlighted(body) = highlight(fill: rgb("#ddddff"), body)
+
+// For `filebox`:
+#let Rfilebox(body) = body
+#let Rfiletitle(body) = align(right, body)
+#let Rfilename(body) = box(fill: rgb("#ECF5F5"),
+                           stroke: (top: 0.6pt + rgb("#6C8585"), right: 0.6pt + rgb("#6C8585")),
+                           inset: (x: 0.5em, y: 2pt),
+                           body)
+#let Rfilecontent(body) = body
+
+// For inherited-method labels in `defclass`:
+#let inheritedlbl(body) = text(style: "italic", body)
+

@@ -5,6 +5,7 @@
          scribble/decode
          scribble/html-properties
          scribble/latex-properties
+         scribble/typst-properties
          setup/main-collects
          "private/counter.rkt"
          scribble/private/lang-parameters)
@@ -37,7 +38,8 @@
                 (collection-file-path s "scriblib")))])
     (list 'never-indents
           (make-css-addition (abs "figure.css"))
-          (make-tex-addition (abs "figure.tex")))))
+          (make-tex-addition (abs "figure.tex"))
+          (make-typ-addition (abs "figure.typ")))))
 
 ;; outer layer:
 (define herefigure-style  (make-style "Herefigure" figure-style-extras))

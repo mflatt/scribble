@@ -5,6 +5,7 @@
          scribble/decode
          scribble/html-properties
          scribble/latex-properties
+         scribble/typst-properties
          racket/promise
          setup/main-collects
          scriblib/render-cond
@@ -18,7 +19,8 @@
                (path->main-collects-relative
                 (collection-file-path s "scriblib")))])
     (list (make-css-addition (abs "footnote.css"))
-          (make-tex-addition (abs "footnote.tex")))))
+          (make-tex-addition (abs "footnote.tex"))
+          (make-typ-addition (abs "footnote.typ")))))
 
 
 (define note-box-style (make-style "NoteBox" footnote-style-extras))

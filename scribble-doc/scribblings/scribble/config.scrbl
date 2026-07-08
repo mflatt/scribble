@@ -1,6 +1,7 @@
 #lang scribble/doc
 @(require scribble/manual scribble/core scribble/decode
           scribble/html-properties scribble/latex-properties
+          scribble/typst-properties
           "utils.rkt"
           (for-label racket/base
                      scribble/latex-prefix))
@@ -49,7 +50,8 @@ extend or configure Scribble fall into two groups:
 
 @section[#:tag "extra-style" 
          #:style (make-style #f (list (make-css-addition "inbox.css")
-                                      (make-tex-addition "inbox.tex")))
+                                      (make-tex-addition "inbox.tex")
+                                      (make-typ-addition "inbox.typ")))
         ]{Implementing Styles}
 
 When a string is used as a style in an @racket[element], 

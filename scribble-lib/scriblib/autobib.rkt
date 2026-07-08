@@ -8,6 +8,7 @@
          scribble/decode
          scribble/html-properties
          scribble/latex-properties
+         scribble/typst-properties
          (for-syntax syntax/parse
                      racket/base)
          racket/string
@@ -74,7 +75,8 @@
                 (collection-file-path s "scriblib")))])
     (list
      (make-css-addition (abs "autobib.css"))
-     (make-tex-addition (abs "autobib.tex")))))
+     (make-tex-addition (abs "autobib.tex"))
+     (make-typ-addition (abs "autobib.typ")))))
 
 (define bib-single-style (make-style "AutoBibliography" autobib-style-extras))
 (define bib-columns-style (make-style #f autobib-style-extras))

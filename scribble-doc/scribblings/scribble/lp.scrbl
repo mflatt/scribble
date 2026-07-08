@@ -1,6 +1,7 @@
 #lang scribble/doc
 @(require scribble/manual scribble/core scribble/html-properties
           scribble/latex-properties
+          scribble/typst-properties
           racket/runtime-path
           racket/file
           "utils.rkt"
@@ -10,7 +11,8 @@
 @title[#:tag "lp"
        #:style (make-style #f
                            (list (make-css-addition "lp.css")
-                                 (make-tex-addition "lp.tex")))
+                                 (make-tex-addition "lp.tex")
+                                 (make-typ-addition "lp.typ")))
       ]{Literate Programming}
 
 Programs written using @racketmodname[scribble/lp2] are simultaneously
