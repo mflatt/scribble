@@ -22,18 +22,26 @@
   (newline)
   (indent))
 
-(define in-code? (make-parameter #f))
 (define in-link? (make-parameter #f))
+;; True while rendering content whose spacing and characters should
+;; be kept verbatim, such as code: spaces are converted to
+;; non-breaking spaces, and ligature-like substitutions (quotes and
+;; dashes) are disabled:
 (define preserving-spaces? (make-parameter #f))
-;; When rendering in code mode, a box to accumulate labels for
-;; target elements that appear in the code, so that anchors can be
-;; emitted after the code block:
-(define code-target-labels (make-parameter #f))
 
 (define typst-part-tag 'typst-section)
 
 (define-runtime-path scribble-prefix-typ "scribble-prefix.typ")
 (define-runtime-path scribble-style-typ "scribble-style.typ")
+(define-runtime-path racket-typ "racket.typ")
+
+;; Styles (from "racket.rkt") that have a corresponding function
+;; definition in "racket.typ":
+(define rkt-style-names
+  '("RktPlain" "RktBlk" "RktIn" "RktInBG" "RktRdr" "RktPn" "RktMeta"
+    "RktMod" "RktKw" "RktOpt" "RktErr" "RktVar" "RktSym" "RktSymDef"
+    "RktValLink" "RktValDef" "RktModLink" "RktStxLink" "RktStxDef"
+    "RktRes" "RktOut" "RktCmt" "RktVal" "highlighted"))
 
 ;; Escape a string for use in Typst markup mode. The escaped set
 ;; covers all characters that are (or can be) markup-significant;
@@ -125,12 +133,6 @@
         (hash-set! emitted-labels lbl #t)
         (printf "#metadata(none) <~a>" lbl)))
 
-    (define/private (display-raw s #:block? [block? #f] #:lang [lang #f])
-      (printf "#raw(~a~a\"~a\")"
-              (if block? "block: true, " "")
-              (if lang (format "lang: \"~a\", " lang) "")
-              (typst-string-escape s)))
-
     ;; ----------------------------------------
     ;; collect
 
@@ -155,6 +157,7 @@
               (lambda ()
                 (copy-port (current-input-port) (current-output-port))))))
       (copy-file-to-output (or prefix-file scribble-prefix-typ))
+      (copy-file-to-output racket-typ)
       (copy-file-to-output (or style-file scribble-style-typ))
       (for ([style-file (in-list style-extra-files)])
         (copy-file-to-output style-file))
@@ -289,12 +292,18 @@
       (define s (content-style e))
       (if (style? s) (style-name s) s))
 
-    (define (code? i)
+    ;; For a style with a function definition in "racket.typ", the
+    ;; matching function name; 'tt and other code-like styles map
+    ;; to the plain monospace function:
+    (define (code-style-function i)
       (define sn (content-style-name i))
-      (or (eq? sn 'tt)
-          (eq? sn 'url)
-          (and (string? sn)
-               (regexp-match? #rx"^Rkt[A-Z]" sn))))
+      (cond
+        [(and (string? sn) (member sn rkt-style-names)) sn]
+        [(or (eq? sn 'tt)
+             (eq? sn 'url)
+             (and (string? sn) (regexp-match? #rx"^Rkt[A-Z]" sn)))
+         "Stt"]
+        [else #f]))
 
     (define (preserve-spaces? i)
       (eq? 'hspace (content-style-name i)))
@@ -306,46 +315,33 @@
              (and (target-url? v) v))))
 
     (define/override (render-content e part ri)
+      (when (target-element? e)
+        (emit-anchor (t-encode (add-current-tag-prefix
+                                (tag-key (target-element-tag e) ri)))))
+      (define link-target
+        (and (not (in-link?))
+             (or (let ([u (find-target-url e)])
+                   (and u (target-url-addr u)))
+                 (and (link-element? e)
+                      (let-values ([(dest ext?)
+                                    (resolve-get/ext? part ri (link-element-tag e))])
+                        (and dest
+                             (not ext?)
+                             (let ([lbl (t-encode (vector-ref dest 1))])
+                               (hash-set! linked-labels lbl #t)
+                               (list 'label lbl))))))))
       (cond
-        [(in-code?)
-         ;; Plain rendering, accumulating the labels of any target
-         ;; elements so that anchors can be emitted after the code:
-         (when (and (target-element? e) (code-target-labels))
-           (let ([b (code-target-labels)])
-             (set-box! b (cons (t-encode (add-current-tag-prefix
-                                          (tag-key (target-element-tag e) ri)))
-                               (unbox b)))))
-         (if (eq? 'newline (content-style-name e))
-             (begin (display "\n") null)
-             (super render-content e part ri))]
-        [else
-         (when (target-element? e)
-           (emit-anchor (t-encode (add-current-tag-prefix
-                                   (tag-key (target-element-tag e) ri)))))
-         (define link-target
-           (and (not (in-link?))
-                (or (let ([u (find-target-url e)])
-                      (and u (target-url-addr u)))
-                    (and (link-element? e)
-                         (let-values ([(dest ext?)
-                                       (resolve-get/ext? part ri (link-element-tag e))])
-                           (and dest
-                                (not ext?)
-                                (let ([lbl (t-encode (vector-ref dest 1))])
-                                  (hash-set! linked-labels lbl #t)
-                                  (list 'label lbl))))))))
-         (cond
-           [link-target
-            (if (pair? link-target)
-                (printf "#link(label(\"~a\"))[" (cadr link-target))
-                (printf "#link(\"~a\")[" (typst-string-escape
-                                          (let ([p link-target])
-                                            (if (path? p) (path->string p) p)))))
-            (begin0
-              (parameterize ([in-link? #t])
-                (render-styled e part ri))
-              (display "]"))]
-           [else (render-styled e part ri)])]))
+        [link-target
+         (if (pair? link-target)
+             (printf "#link(label(\"~a\"))[" (cadr link-target))
+             (printf "#link(\"~a\")[" (typst-string-escape
+                                       (let ([p link-target])
+                                         (if (path? p) (path->string p) p)))))
+         (begin0
+           (parameterize ([in-link? #t])
+             (render-styled e part ri))
+           (display "]"))]
+        [else (render-styled e part ri)]))
 
     (define/private (render-styled e part ri)
       (define es (content-style e))
@@ -380,11 +376,21 @@
         [(and (convertible? e)
               (render-convertible e))
          null]
-        [(code? e)
-         (render-code e part ri)]
+        [(code-style-function e)
+         => (lambda (fn)
+              (printf "#~a[" fn)
+              (begin0
+                (parameterize ([preserving-spaces? #t])
+                  (super render-content e part ri))
+                (display "]")))]
         [(and (preserve-spaces? e) (not (preserving-spaces?)))
-         (parameterize ([preserving-spaces? #t])
-           (render-content e part ri))]
+         ;; The monospace wrapper makes the width of the preserved
+         ;; spaces match surrounding code (as in "scribble.css"):
+         (display "#Stt[")
+         (begin0
+           (parameterize ([preserving-spaces? #t])
+             (render-content e part ri))
+           (display "]"))]
         [(eq? sn 'bold) (wrap "#strong[" "]")]
         [(or (eq? sn 'italic) (eq? sn 'emph)) (wrap "#emph[" "]")]
         [(eq? sn 'subscript) (wrap "#sub[" "]")]
@@ -396,20 +402,6 @@
          (display "#linebreak()")
          null]
         [else (super render-content e part ri)]))
-
-    ;; Render code content to a string with escapes disabled, and
-    ;; emit it as a `#raw' form:
-    (define/private (render-code e part ri)
-      (define o (open-output-string))
-      (define targets (box null))
-      (parameterize ([current-output-port o]
-                     [in-code? #t]
-                     [code-target-labels targets])
-        (super render-content e part ri))
-      (display-raw (get-output-string o))
-      (for ([lbl (in-list (reverse (unbox targets)))])
-        (emit-anchor lbl))
-      null)
 
     ;; ----------------------------------------
     ;; images
@@ -496,9 +488,8 @@
       (cond
         [(and (not show-pre?) (memq 'pretitle props))
          null]
-        [(and (not (in-code?))
-              (or (memq (style-name s) '(inset code-inset vertical-inset))
-                  (member (style-name s) '("refcontent" "refpara" "refparaleft"))))
+        [(or (memq (style-name s) '(inset code-inset vertical-inset))
+             (member (style-name s) '("refcontent" "refpara" "refparaleft")))
          (printf "#block(inset: (left: 1em))[\n")
          (begin0
            (super render-nested-flow i part ri starting-item?)
@@ -512,80 +503,26 @@
 
     (define/override (render-table i part ri starting-item?)
       (define flowss (table-blockss i))
-      (define tick? (member (style-name (table-style i))
-                            (list 'boxed "defmodule" "RktBlk")))
       (cond
         [(or (null? flowss) (null? (car flowss))) null]
-        [(and tick? (not (in-code?)))
-         ;; A code-flavored table: render it as plain text in a
-         ;; `raw' block
-         (define o (open-output-string))
-         (define targets (box null))
-         (parameterize ([current-output-port o]
-                        [current-indent 0]
-                        [in-code? #t]
-                        [code-target-labels targets])
-           (render-table i part ri starting-item?))
-         (display-raw (regexp-replace #rx"\n+$" (get-output-string o) "")
-                      #:block? #t
-                      #:lang "racket")
-         (newline)
-         (for ([lbl (in-list (reverse (unbox targets)))])
-           (emit-anchor lbl))
-         null]
-        [(in-code?)
-         ;; Plain-text rendering of a table, with columns aligned by
-         ;; padding with spaces (as in the markdown renderer):
-         (define strs (map (lambda (flows)
-                             (map (lambda (d)
-                                    (cond
-                                      [(eq? d 'cont) d]
-                                      [else
-                                       (define o (open-output-string))
-                                       (parameterize ([current-indent 0]
-                                                      [current-output-port o])
-                                         (render-block d part ri #f))
-                                       (regexp-split
-                                        #rx"\n"
-                                        (regexp-replace #rx"\n$" (get-output-string o) ""))]))
-                                  flows))
-                           flowss))
-         (define widths (map (lambda (col)
-                               (for/fold ([d 0]) ([i (in-list col)])
-                                 (if (eq? i 'cont)
-                                     0
-                                     (apply max d (map string-length i)))))
-                             (apply map list strs)))
-         (define (x-length col)
-           (if (eq? col 'cont) 0 (length col)))
-         (for/fold ([indent? #f]) ([row (in-list strs)])
-           (let ([h (apply max 0 (map x-length row))])
-             (define row*
-               (for/list ([i (in-range h)])
-                 (for/list ([col (in-list row)])
-                   (if (i . < . (x-length col)) (list-ref col i) ""))))
-             (for/fold ([indent? indent?]) ([sub-row (in-list row*)])
-               (when indent?
-                 (indent))
-               (for/fold ([space? #f])
-                         ([col (in-list sub-row)]
-                          [w (in-list widths)])
-                 (let ([col (if (eq? col 'cont) "" col)])
-                   (display (regexp-replace* #rx"\uA0" col " "))
-                   (display (make-string (max 0 (- w (string-length col))) #\space)))
-                 #t)
-               (newline)
-               #t))
-           #t)
-         null]
         [else
-         ;; A real table:
+         ;; Backgrounds as in "racket.css":
+         (define wrap-fill
+           (let ([s-name (style-name (table-style i))])
+             (cond
+               [(eq? s-name 'boxed) "#E8E8FF"]
+               [(equal? s-name "defmodule") "#F5F5DC"]
+               [else #f])))
+         (when wrap-fill
+           (printf "#block(width: 100%, fill: rgb(\"~a\"), inset: 3pt)[\n" wrap-fill))
          (define cell-styless (extract-table-cell-styles i))
          (printf "#table(\n")
          (indent)
          (printf "  columns: ~a,\n" (length (car flowss)))
          (indent)
          (printf "  stroke: none,\n")
+         (indent)
+         (printf "  inset: (x: 2pt, y: 1.5pt),\n")
          (for ([row (in-list flowss)]
                [styles (in-list cell-styless)])
            (indent)
@@ -635,14 +572,24 @@
                   (if (null? opts)
                       (printf "[")
                       (printf "table.cell(~a)[" (string-join opts ", ")))
-                  (parameterize ([current-indent 0])
+                  (define o (open-output-string))
+                  (parameterize ([current-indent 0]
+                                 [current-output-port o])
                     (render-block d part ri #f))
+                  (let ([s (regexp-replace #rx"\n+$" (get-output-string o) "")])
+                    ;; A non-breaking space keeps an all-blank row
+                    ;; (such as a blank line in a code block) from
+                    ;; collapsing:
+                    (display (if (regexp-match? #px"^\\s*$" s) "\uA0" s)))
                   (printf "], ")
                   (loop (list-tail row cnt) (list-tail styles cnt))])))
            (newline))
          (indent)
          (printf ")")
          (newline)
+         (when wrap-fill
+           (printf "]")
+           (newline))
          null]))
 
     ;; ----------------------------------------
@@ -668,19 +615,18 @@
                     [(nbsp) "\uA0"]
                     [else (error 'typst-render "unknown element symbol: ~e" i)]))]
         [(string? i)
-         (cond
-           [(in-code?) (display i)]
-           [else
-            (let* ([s (regexp-replace** i '((#rx"---" . "—")
-                                            (#rx"--" . "–")
-                                            (#rx"``" . "“")
-                                            (#rx"''" . "”")
-                                            (#rx"'" . "’")))]
-                   [s (typst-escape s)]
-                   [s (if (preserving-spaces?)
-                          (regexp-replace* #rx" " s "\uA0")
-                          s)])
-              (display s))])]
+         (let* ([s (if (preserving-spaces?)
+                       i ; verbatim: no quote or dash substitutions
+                       (regexp-replace** i '((#rx"---" . "—")
+                                             (#rx"--" . "–")
+                                             (#rx"``" . "“")
+                                             (#rx"''" . "”")
+                                             (#rx"'" . "’"))))]
+                [s (typst-escape s)]
+                [s (if (preserving-spaces?)
+                       (regexp-replace* #rx" " s "\uA0")
+                       s)])
+           (display s))]
         [else (render-other (format "~s" i) part ri)])
       null)))
 

@@ -655,12 +655,20 @@ source is self-contained, so rendering does not require a @exec{typst}
 executable, but compiling the generated source to PDF requires
 one.
 
-Code is rendered using Typst's @tt{raw} form with @tt{racket} as the
-language, so it is lexed and formatted as Racket code. Hyperlinks
-within the document are rendered as Typst labels and references to
-labels, and section titles include section numbers (as computed by
-Scribble) as literal text, instead of using Typst's heading-numbering
-support.
+Code is rendered using Scribble's own token classification: each code
+style (such as the styles produced by @racketmodname[scribble/manual]
+forms) is rendered as a call to a Typst function that is defined by
+the @filepath{racket.typ} file in the @filepath{scribble} collection,
+where the function definitions follow the colors of
+@filepath{racket.css}. Because @filepath{racket.typ} is included
+before any style files, a style file (as supplied with @DFlag{style}
+or @DPFlag{style}) can shadow those definitions with new @tt{#let}
+bindings to adjust the rendering of code.
+
+Hyperlinks within the document---including hyperlinks within
+code---are rendered as Typst labels and references to labels, and
+section titles include section numbers (as computed by Scribble) as
+literal text, instead of using Typst's heading-numbering support.
 
 @history[#:added "1.66"]}}
 

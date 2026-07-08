@@ -1,0 +1,30 @@
+// Style definitions for rendering Racket code in Typst output,
+// following the colors of "racket.css". This file is included after
+// the prefix file and before any style files, so a style file (as
+// supplied with the `--style` or `++style` flags) can shadow these
+// definitions with new `#let` bindings.
+#let Stt(body) = text(font: ("DejaVu Sans Mono",), body)
+#let RktPlain(body) = Stt(body)
+#let RktBlk(body) = Stt(body)
+#let RktIn(body) = highlight(fill: rgb("#eeeeee"), Stt(text(fill: rgb("#cc6633"), body)))
+#let RktInBG(body) = highlight(fill: rgb("#eeeeee"), body)
+#let RktRdr(body) = Stt(body)
+#let RktPn(body) = Stt(text(fill: rgb("#843c24"), body))
+#let RktMeta(body) = Stt(body)
+#let RktMod(body) = Stt(body)
+#let RktKw(body) = Stt(body)
+#let RktOpt(body) = Stt(text(style: "italic", body))
+#let RktErr(body) = text(fill: red, style: "italic", body)
+#let RktVar(body) = Stt(text(fill: rgb("#262680"), style: "italic", body))
+#let RktSym(body) = Stt(text(fill: rgb("#262680"), body))
+#let RktSymDef(body) = RktSym(body)
+#let RktValLink(body) = Stt(text(fill: rgb("#0000ff"), body))
+#let RktValDef(body) = RktValLink(body)
+#let RktModLink(body) = Stt(text(fill: rgb("#0000ff"), body))
+#let RktStxLink(body) = Stt(body)
+#let RktStxDef(body) = RktStxLink(body)
+#let RktRes(body) = Stt(text(fill: rgb("#0000af"), body))
+#let RktOut(body) = Stt(text(fill: rgb("#960096"), body))
+#let RktCmt(body) = Stt(text(fill: rgb("#c2741f"), body))
+#let RktVal(body) = Stt(text(fill: rgb("#228b22"), body))
+#let highlighted(body) = highlight(fill: rgb("#ddddff"), body)
