@@ -299,7 +299,9 @@
          (newline)
          null]
         [else
+         (when (string? sn) (printf "#~a[" sn))
          (super render-paragraph p part ri)
+         (when (string? sn) (printf "]"))
          (unless show-pre? (newline))
          null]))
 
@@ -330,8 +332,7 @@
       (cond
         [(and (string? sn) (member sn rkt-style-names)) sn]
         [(or (eq? sn 'tt)
-             (eq? sn 'url)
-             (and (string? sn) (regexp-match? #rx"^Rkt[A-Z]" sn)))
+             (eq? sn 'url))
          "Stt"]
         [else #f]))
 
@@ -431,7 +432,6 @@
         [(eq? sn 'newline)
          (display "#linebreak()")
          null]
-        #;
         [(string? sn) (wrap (string-append "#" sn "[") "]")]
         [else (super render-content e part ri)]))
 
@@ -491,22 +491,19 @@
 
     (define/override (render-itemization i part ri)
       (define flows (itemization-blockss i))
-      (define marker
-        (if (eq? 'ordered (style-name (itemization-style i)))
-            "+ "
-            "- "))
-      (if (null? flows)
-          null
-          (append*
-           (begin
-             (display marker)
-             (parameterize ([current-indent (make-indent 2)])
-               (render-flow (car flows) part ri #t)))
-           (for/list ([d (in-list (cdr flows))])
-             (indented-newline)
-             (display marker)
-             (parameterize ([current-indent (make-indent 2)])
-               (render-flow d part ri #f))))))
+      (define enum? (eq? 'ordered (style-name (itemization-style i))))
+      (unless (null? flows)
+        (displayln (string-append "#"
+                                  (if enum? "enum" "list")
+                                  "("))
+        (for/list ([d (in-list flows)]
+                   [i (in-naturals)])
+          (unless (zero? i) (displayln ","))
+          (display "[")
+          (render-flow d part ri #t)
+          (display "]"))
+        (display ")"))
+      null)
 
     ;; ----------------------------------------
     ;; nested flows
@@ -520,13 +517,17 @@
       (cond
         [(and (not show-pre?) (memq 'pretitle props))
          null]
-        [(or (memq (style-name s) '(inset code-inset vertical-inset))
-             (member (style-name s) '("refcontent" "refpara" "refparaleft")))
+        [(memq (style-name s) '(inset code-inset vertical-inset))
          (printf "#block(inset: (left: 1em))[\n")
          (begin0
            (super render-nested-flow i part ri starting-item?)
            (printf "\n]")
            (newline))]
+        [(string? (style-name s))
+         (printf "#~a[" (style-name s))
+         (begin0
+           (super render-nested-flow i part ri starting-item?)
+           (printf "]"))]
         [else
          (super render-nested-flow i part ri starting-item?)]))
 
