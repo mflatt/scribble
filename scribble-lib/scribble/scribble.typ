@@ -1,3 +1,32 @@
+#let SVersion(version) = [Version #version]
+
+#let Stitle(title: [],
+            version: none,
+            authors: none,
+            date: none) = {
+  align(center)[#text(1.8em, weight: "bold", title)]
+  if version != none {
+    align(center)[#text(1.1em, version)]
+  }
+  if authors != none {
+    for author in authors {
+      align(center)[#author]
+    }
+  }
+  if date != none {
+    align(center)[#date]
+  }
+}
+
+#let Sheading(depth: none, outlined: true, hidden: false, content) = {
+  if hidden and outlined {
+     show heading: none
+     heading(depth: depth, content)
+  } else {
+    heading(depth: depth, outlined: outlined, content)
+  }
+}
+
 #let Stt(body) = text(font: ("DejaVu Sans Mono",), size: 0.9em, body)
 
 #let refpara(e) = e
@@ -24,6 +53,10 @@
 #let Sendabbrev(e) = e
 #let Sendsentence(e) = e
 
+#let SInset(body) = block(inset: (left: 1em), body)
+#let SCodeInset(body) = SInset(body)
+#let SVerticalInset(body) = body
+
 #let SHistory(body) = text(size: 0.85em, body)
 #let SCentered(body) = align(center, body)
 // A `subsubsub*section` title, rendered as a run-in heading:
@@ -41,3 +74,13 @@
 #let smaller(body) = text(size: 0.83em, body)
 #let larger(body) = text(size: 1.2em, body)
 #let slant(body) = text(style: "oblique", body)
+
+#let Stable(columns: [], ..content) = table(columns: columns, 
+                                            stroke: none,
+                                            inset: (x: 0pt, y: 0.25em),
+                                             ..content)
+#let Sboxed(columns: [], ..content) = block(width: 100%,
+                                            fill: rgb("#E8E8FF"),
+                                            inset: 3pt,
+                                            Stable(columns: columns, ..content))
+#let SVerbatim = Stable

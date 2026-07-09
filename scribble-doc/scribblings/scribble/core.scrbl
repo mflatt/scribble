@@ -149,7 +149,7 @@ A @deftech{block} is either a @techlink{table}, an
                          @racket['nbsp], @racket['prime],
                          @racket['alpha], or @racket['infin]; it is
                          rendered as the corresponding HTML entity
-                         (even for Latex output).}
+                         (even for other output formats, such as Latex or Typst).}
 
                    @item{A convertible value in the sense of @racket[convertible?]
                          is used in a renderer-specific way, but values convertible
@@ -424,7 +424,7 @@ The recognized @tech{style properties} are as follows:
        the section, but it is not rendered as part of the section name.}
 
  @item{@indexed-racket['toc-hidden] --- The part title is not shown in tables
-       of contents, including in ``on this page'' boxes. For Latex
+       of contents, including in ``on this page'' boxes. For Latex and Typst
        rendering, the part title is omitted only if it is unnumbered
        or has a hidden number.}
 
@@ -524,15 +524,17 @@ The recognized @tech{style properties} are as follows:
        the version is normally prefixed with the word ``Version,'' but
        this formatting can be controlled by overriding
        @tt{.version:before} and/or @tt{.versionNoNav:before} in CSS
-       for HTML rendering or by redefining the @tt{\SVersionBefore}
-       macro for Latex rendering (see @secref["config"]).}
+       for HTML rendering, by redefining the @tt{\SVersionBefore}
+       macro for Latex rendering (see @secref["config"]), by redefining
+       the @tt{SVersion} function for Typst rendering (see @secref["config"]).}
 
  @item{@racket[document-date] structure --- A date for the part,
        normally used on a document's main part for for Latex
        output. The default date for a document is @racket[#f], which
        avoids explicitly specifying a date at the Latex level, so that
        the current date is used as the document date. Set the date to
-       @racket[""] to suppress a date in an output document.}
+       @racket[""] to suppress a date in an output document. For Typst,
+       @racket[#f] and @racket[""] are effectively the same.}
 
   @item{@racket[body-id] structure --- Generated HTML uses the given
         string @tt{id} attribute of the @tt{<body>} tag; this @tech{style property} can
@@ -627,8 +629,9 @@ The @racket[parts] field contains sub-parts.
 A @techlink{paragraph} has a @tech{style} and a @tech{content}.
 
 For the @racket[style] field, a string @tech{style name} corresponds
-to a CSS class for HTML output or a macro for Latex output (see
-@secref["extra-style"]). The following symbolic @tech{style names} are
+to a CSS class for HTML output, a macro for Latex output, or a function
+for Typst output  (see @secref["extra-style"]).
+The following symbolic @tech{style names} are
 recognized:
 
 @itemize[
@@ -636,7 +639,7 @@ recognized:
  @item{@indexed-racket['author] --- Typeset as the author of a document.  Such
        paragraphs normally should appear only in the initial flow of a
        @racket[part] for a document, where they are treated specially
-       by the Latex renderer by moving the author information to the
+       by the Latex and Typst renderers by moving the author information to the
        title.}
 
  @item{@indexed-racket['pretitle] --- Typeset before the title of the
@@ -689,8 +692,9 @@ a block in the following columns (i.e., for all but the first in a set
 of cells that contain a single block).
 
 Within @racket[style], a string @tech{style name} corresponds to a CSS
-class for HTML output or an environment for Latex output (see
-@secref["extra-style"]). The following symbolic style names are also
+class for HTML output, an environment for Latex output, or a function
+for Typst output that expects a @tt{columns} argument before content
+arguments (see @secref["extra-style"]). The following symbolic style names are also
 recognized:
 
 @itemize[
@@ -702,7 +706,7 @@ recognized:
 
  @item{@indexed-racket['centered] --- Centers HTML output horizontally.}
 
- @item{@indexed-racket['block] --- Prevents pages breaks in Latex output.}
+ @item{@indexed-racket['block] --- Prevents pages breaks in Latex and Typst output.}
 
 ]
 
@@ -749,8 +753,8 @@ output of blocks in the flow that are @racket[nested-flow]s,
 A @techlink{itemization} has a @tech{style} and a list of @tech{flows}.
 
 In @racket[style], a string @tech{style name} corresponds to a CSS
-class for HTML output or a macro for Latex output (see
-@secref["extra-style"]). In addition, the following symbolic style
+class for HTML output, a macro for Latex output, or a function name
+for Typst output (see @secref["extra-style"]). In addition, the following symbolic style
 names are recognized:
 
 @itemize[
@@ -758,7 +762,7 @@ names are recognized:
  @item{@indexed-racket['compact] --- Reduces space between items.}
 
  @item{@indexed-racket['ordered] --- Generates @tt{<ol>} HTML output instead
-       of @tt{<ul>} or an Latex enumeration instead of an
+       of @tt{<ul>} or an Latex or Typst enumeration instead of an
        itemization.}
 ]
 
@@ -781,9 +785,9 @@ The following @tech{style properties} are currently recognized:
 A @techlink{nested flow} has a style and a @tech{flow}.
 
 In @racket[style], the @tech{style name} is normally a string that
-corresponds to a CSS class for HTML @tt{<blockquote>} output or a Latex
-environment (see @secref["extra-style"]). The following symbolic style
-names are recognized:
+corresponds to a CSS class for HTML @tt{<blockquote>} output, a Latex
+environment, or a Typst function name (see @secref["extra-style"]).
+The following symbolic style names are recognized:
 
 @itemize[
 
@@ -810,8 +814,8 @@ The following @tech{style properties} are currently recognized:
        name} is used as a command name instead of an environment
        name.}
 
- @item{@indexed-racket['multicommand] --- For Latex output, a string
-       @tech{style name} is used as a command name with a separate
+ @item{@indexed-racket['multicommand] --- For Latex or Typst output, a string
+       @tech{style name} is used as a command or function name with a separate
        argument for each block in @racket[blocks].}
 
  @item{@racket[attributes] structure --- Provides additional HTML
@@ -830,7 +834,7 @@ The following @tech{style properties} are currently recognized:
  @item{@racket[alt-tag] structure --- Generates the indicated HTML tag
        instead of @tt{<blockquote>}.}
 
- @item{@indexed-racket['pretitle] --- For Latex, raises the contents
+ @item{@indexed-racket['pretitle] --- For Latex and Typst, raises the contents
    of the flow to above the title.}
 ]}
 
@@ -851,8 +855,9 @@ if the @racket[nested-flow] or @racket[compound-paragraph] itself has
 no @racket['never-indents] property).
 
 The @racket[style] field of a compound paragraph is normally a string
-that corresponds to a CSS class for HTML output or Latex environment
-for Latex output (see @secref["extra-style"]). The following
+that corresponds to a CSS class for HTML output, Latex environment
+for Latex output, or a function name for Typst output
+(see @secref["extra-style"]). The following
 @tech{style properties} are currently recognized:
 
 @itemize[
@@ -899,7 +904,8 @@ takes a symbol and a value to be registered for the symbol.
 The symbol @indexed-racket['scribble:current-render-mode] is
 automatically registered to a list of symbols that describe the
 target of document rendering. The list contains @racket['html]
-when rendering to HTML, @racket['latex] when rendering via Latex, and
+when rendering to HTML, @racket['latex] when rendering via Latex,
+@racket['typst] when rendering via Typst, and
 @racket['text] when rendering to text. The registration of
 @racket['scribble:current-render-mode] cannot be changed via
 @racket[_set].}
@@ -923,7 +929,8 @@ The @racket[style] field can be a @racket[style] structure, but it can
 also be just a @tech{style name}.
 
 In @racket[style], a string @tech{style name} corresponds to a CSS
-class for HTML output and a macro name for Latex output (see
+class for HTML output, a command name for Latex output, and
+a functionname for Typst output (see
 @secref["extra-style"]). The following symbolic style names are
 recognized:
 
@@ -988,8 +995,10 @@ The following @tech{style properties} are currently recognized:
         name} is a string or @racket[#f], render the elements content exactly
         (without escapes).}
 
-  @item{@racket[command-extras] structure --- For Latex output,
-         adds strings as arguments to the Latex command.}
+  @item{@racket[command-extras] structure --- For Latex or Typst output,
+         adds strings as arguments to the Latex command or Typst function.
+         The arguments are written verbatim, and they are written as text
+         mode for Typst.}
 
 ]
 
@@ -1195,9 +1204,9 @@ See also @racket[index].}
                              [contents (listof content?)])]{
 
 Like @racket[element] with a list for content, except that for Latex
-output, if the @tech{style name} in @racket[style] is a string, then
-it corresponds to a Latex command that accepts as many arguments (each
-in curly braces) as elements of @racket[contents].}
+or Typst output, if the @tech{style name} in @racket[style] is a string, then
+it corresponds to a Latex command or Typst function that accepts as many arguments (each
+in curly braces for Latex or square brackets for Typst) as elements of @racket[contents].}
 
 
 @defstruct[traverse-element ([traverse element-traverse-procedure/c])]{
@@ -1352,7 +1361,7 @@ Used as a @tech{style property} for a @racket[table] to set its cells'
 styles.
 
 If a cell style has a string name, it is used as an HTML class for the
-@tt{<td>} tag or as a Latex command name.
+@tt{<td>} tag, as a Latex command name, or as a Typst function name.
 
 The following are recognized as cell-@tech{style properties}:
 
@@ -2138,7 +2147,8 @@ See also @racketmodname[scribble/latex-prefix].}
 @defstruct[command-extras ([arguments (listof string?)])]{
 
 Used as a @tech{style property} on an @racket[element] to add extra
-arguments to the element's command in Latex output.}
+arguments to the element's command in Latex output or the element's.
+function for Typst output.}
 
 @defstruct[command-optional ([arguments (listof string?)])]{
                                                   

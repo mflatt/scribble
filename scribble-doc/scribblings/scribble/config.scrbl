@@ -26,10 +26,11 @@ extend or configure Scribble fall into two groups:
 
 @itemize[
 
- @item{You may need to drop into the back-end ``language'' of CSS or
-       Latex to create a specific output effect. For this kind of
+ @item{You may need to drop into the back-end ``language'' of CSS,
+       Latex, or Typst to create a specific output effect. For this kind of
        extension, you will mostly likely attach a
-       @racket[css-addition] or @racket[tex-addition] @tech{style property}
+       @racket[css-addition], @racket[tex-addition], or
+       @racket[typ-addition] @tech{style property}
        to style, where the addition implements the style name. This
        kind of extension is described in @secref["extra-style"].}
 
@@ -37,8 +38,9 @@ extend or configure Scribble fall into two groups:
        different from the Racket documentation style. For that
        kind of configuration, you can run the @exec{scribble} command-line
        tool and supply flags like @DFlag{prefix} or @DPFlag{style}, or
-       you can associate a @racket[html-defaults] or
-       @racket[latex-defaults] @tech{style property} to the main document's
+       you can associate a @racket[html-defaults],
+       @racket[latex-defaults], or @racket[typst-defaults]
+       @tech{style property} to the main document's
        style. This kind of configuration is described in
        @secref["config-style"].}
 
@@ -58,7 +60,8 @@ When a string is used as a style in an @racket[element],
 a @racket[multiarg-element], @racket[paragraph], @racket[table],
 @racket[itemization], @racket[nested-flow], or
 @racket[compound-paragraph], it corresponds to a CSS class for HTML
-output or a Latex macro/environment for Latex output. In Latex output,
+output, a Latex macro/environment for Latex output, or a function
+name for Typst output. In Latex output,
 the string is used as a command name for a @racket[paragraph]
 and an environment name for a @racket[table], @racket[itemization],
 @racket[nested-flow], or @racket[compound-paragraph]; if the style has
@@ -75,22 +78,25 @@ in the case of Latex).
 To add a mapping from your own style name to a CSS configuration, add
 a @racket[css-addition] structure instance to a style's @tech{style property}
 list. To map a style name to a Latex macro or environment, add a
-@racket[tex-addition] structure instance. A @racket[css-addition] or
-@racket[tex-addition] is normally associated with the style whose name
+@racket[tex-addition] structure instance. To map a style name to a
+Typst function, add a @racket[typ-addition] structure instance. A
+@racket[css-addition], @racket[tex-addition], or @racket[typ-addition]
+is normally associated with the style whose name
 is implemented by the addition, but it can also be added to the style
 for an enclosing part.
 
 Scribble includes a number of predefined styles that are used by the
 exports of @racket[scribble/base]. You can use them or redefine
-them. The styles are specified by @filepath{scribble.css} and
-@filepath{scribble.tex} in the @filepath{scribble} collection.
+them. The styles are specified by @filepath{scribble.css},
+@filepath{scribble.tex}, and @filepath{scribble.typ} in the
+@filepath{scribble} collection.
 
 The styles used by @racketmodname[scribble/manual] are implemented by
-@filepath{racket.css} and @filepath{racket.tex} in the
+@filepath{racket.css}, @filepath{racket.tex}, and @filepath{racket.typ} in the
 @filepath{scribble} collection. Other libraries, such as
 @racketmodname[scriblib/autobib], similarly implement styles through files
-that are associated by @racket[css-addition] and @racket[tex-addition]
-@tech{style properties}.
+that are associated by @racket[css-addition], @racket[tex-addition],
+and @racket[typ-addition] @tech{style properties}.
 
 To avoid collisions with future additions to Scribble, start your
 style name with an uppercase letter that is not @litchar{S}. An
@@ -109,7 +115,8 @@ For example, a Scribble document
  @(define inbox-style
     (make-style "InBox"
                 (list (make-css-addition "inbox.css")
-                      (make-tex-addition "inbox.tex"))))
+                      (make-tex-addition "inbox.tex")
+                      (make-tex-addition "inbox.typ"))))
 
  @title{Quantum Pet}
 
@@ -129,6 +136,12 @@ and an @filepath{inbox.tex} that contains
 
 @verbatim[#:indent 2]|{
   \newcommand{\InBox}[1]{\fbox{#1}}
+}|
+
+and an @filepath{inbox.typ} that contains
+
+@verbatim[#:indent 2]|{
+  #let InBox(content) = box(inset: 0.2em, stroke: 1pt, content)
 }|
 
 generates
@@ -172,8 +185,10 @@ on separately configurable parameters, and configuration is also
 possible by replacing style implementations. Latex output is more
 configurable in the former way, since a document class determines a
 set of page-layout and font properties that are used by other
-commands. The style-replacement kind of configuration corresponds to
-re-defining Latex macros or overriding CSS class attributes.  When
+commands. Typst is similar to Latex in that way.
+The style-replacement kind of configuration corresponds to
+overriding CSS class attributes or re-defining Latex commands or
+shadowing Typst functions.  When
 @exec{raco setup} builds PDF documentation, it uses both kinds of
 configuration to produce a standard layout for Racket manuals;
 that is, it selects a particular page layout, and it replaces some
@@ -184,20 +199,21 @@ Two kinds of files implement the two kinds of configuration:
 @itemize[
 
  @item{A @deftech{prefix file} determines the @tt{DOCTYPE} line for
-       HTML output or the @ltx{documentclass} configuration (and
+       HTML output, the @ltx{documentclass} configuration (and
        perhaps some addition package uses or other configurations) for
-       Latex output.
+       Latex output, and a similar prefix for Typst output.
 
-       The default prefix files are @filepath{scribble-prefix.html}
-       and @filepath{scribble-prefix.tex} in the @filepath{scribble}
-       collection.}
+       The default prefix files are @filepath{scribble-prefix.html},
+       @filepath{scribble-prefix.tex}, and @filepath{scribble-prefix.typ}
+       in the @filepath{scribble} collection.}
 
  @item{A @deftech{style file} refines the implementation of styles
        used in the document---typically just the ``built-in'' styles
        used by @racketmodname[scribble/base].
 
-       The default style files, @filepath{scribble-style.css} and
-       @filepath{scribble-style.tex} in the @filepath{scribble}
+       The default style files, @filepath{scribble-style.css},
+       @filepath{scribble-style.tex}, and @filepath{scribble-style.typ}
+       in the @filepath{scribble}
        collection, change no style implementations.}
 
 ]
@@ -230,7 +246,7 @@ accompanying files:
 
 When using the @exec{scribble} command-line utility, a document can
 declare its default style, prefix, and extra files through a
-@racket[html-defaults] and/or @racket[latex-defaults]
+@racket[html-defaults], @racket[latex-defaults], and/or @racket[typst-defaults]
 @tech{style property}. In particular, when using the @exec{scribble}
 command-line tool to generate Latex or PDF a document whose main part
 is implemented with @racket[#, @hash-lang[] #,
@@ -247,8 +263,8 @@ Whether or not a document has a default prefix- and style-file
 configuration through a @tech{style property}, the defaults can be
 overridden using @exec{scribble} command-line flags. Furthermore,
 languages like @racketmodname[scribble/manual] and
-@racketmodname[scribble/sigplan] add a @racket[html-defaults] and/or
-@racket[latex-defaults] @tech{style property} to a main-document part only if
+@racketmodname[scribble/sigplan] add a @racket[html-defaults], @racket[latex-defaults], and/or
+@racket[typs-defaults] @tech{style property} to a main-document part only if
 it does not already have such a property added through the
 @racket[#:style] argument of @racket[title].
 
@@ -516,10 +532,10 @@ The style classes:
 
 @; ------------------------------------------------------------
 
-@section[#:tag "builtin-latex"]{Base Latex Macros}
+@section[#:tag "builtin-latex"]{Latex Commands}
 
 The @filepath{scribble.tex} Latex configuration includes several
-macros and environments that you can redefine to adjust the output
+commands and environments that you can redefine to adjust the output
 style:
 
 @itemlist[
@@ -641,7 +657,7 @@ style:
         @ltx{SNextTitlePlain} is called before each of these to
         register a plain-text version of the title suitable for use
         in table-of-contents metadata, such as in PDF. The default versions
-        of these macros use that plain text via @ltx{STexOrPDFTitle}.}
+        of these commands use that plain text via @ltx{STexOrPDFTitle}.}
 
  @item{@ltxd[1]{Ssectionstar}, @ltxd[1]{Ssubsectionstar},
         @ltxd[1]{Ssubsubsectionstar}, @ltxd[1]{Ssubsubsubsectionstar},
@@ -694,7 +710,7 @@ style:
  ]
 
 Additionally, the @filepath{racket.tex} Latex configuration
-includes several macros that you can redefine to adjust the
+includes several commands that you can redefine to adjust the
 output style of Racket code:
 
 @itemlist[
@@ -724,3 +740,22 @@ constructing a Latex document prefix.}
 A string containing Latex code that is useful after a
 @tt{\documentclass} declaration to make Latex work with Unicode
 characters.}
+
+@; ------------------------------------------------------------
+
+@section[#:tag "builtin-typ"]{Typst Functions}
+
+The @filepath{scribble.typ} Typst configuration defines several
+functions that you can shadow to adjust the output style:
+
+@itemlist[
+
+]
+
+Additionally, the @filepath{racket.typ} Typst configuration defines
+several functions that you can redefine to adjust the output style of
+Racket code:
+
+@itemlist[
+
+]

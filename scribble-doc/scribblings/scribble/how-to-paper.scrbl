@@ -60,11 +60,16 @@ for the kind of document that you want as output:
 
          @item{Run
                 @commandline{scribble --pdf mouse.scrbl}
-               to generate PDF as @filepath{mouse.pdf}. This will
-               work only if you have @exec{pdflatex} installed.
-               If you'd like to see the intermediate Latex, try
+               or
+                @commandline{scribble --typst-pdf mouse.scrbl}
+               to generate PDF as @filepath{mouse.pdf}. The @DFlag{pdf}
+               flag will work only if you have @exec{pdflatex} installed,
+               and @DFlag{typst-pdf} will work only if @exec{typst} is installed.
+               If you'd like to see the intermediate Latex or Typst, try
                 @commandline{scribble --latex mouse.scrbl}
-               to generate @filepath{mouse.tex}.}
+               to generate @filepath{mouse.tex} or
+                @commandline{scribble --typst mouse.scrbl}
+               to generate @filepath{mouse.typ}.}
 
           ]
 

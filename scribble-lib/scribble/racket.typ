@@ -4,7 +4,7 @@
 // supplied with the `--style` or `++style` flags) can shadow these
 // definitions with new `#let` bindings.
 #let RktPlain(body) = Stt(body)
-#let RktBlk(body) = Stt(body)
+#let RktBlk(columns: [], ..content) = Stable(columns: columns, ..content)
 #let RktIn(body) = highlight(fill: rgb("#eeeeee"), Stt(text(fill: rgb("#cc6633"), body)))
 #let RktInBG(body) = highlight(fill: rgb("#eeeeee"), body)
 #let RktRdr(body) = Stt(body)
@@ -40,3 +40,13 @@
 // For inherited-method labels in `defclass`:
 #let inheritedlbl(body) = text(style: "italic", body)
 
+#let defmodule(columns: [], ..content) = block(width: 100%,
+                                               fill: rgb("#F5F5DC"),
+                                               inset: 3pt,
+                                                Stable(columns: columns, ..content))
+#let SVerbatim = Stable
+#let prototype = Stable
+#let together = Stable
+#let specgrammar = Stable
+#let argcontract = Stable
+#let RBibliography = Stable

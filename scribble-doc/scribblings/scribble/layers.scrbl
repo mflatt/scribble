@@ -215,7 +215,7 @@ Working roughly from the bottom up, the Scribble layers are:
        for index-entry descriptions created by functions in
        @racketmodname[scribble/manual]. See @secref["manual"].}
 
- @item{@racketmodname[scribble/eval]: A library of functions for
+ @item{@racketmodname[scribble/example]: A library of functions for
        evaluating code at document-build time, especially for showing
        examples. See @secref["eval"].}
 

@@ -3,6 +3,9 @@
          "base-render.rkt"
          "private/render-utils.rkt"
          "typst-properties.rkt"
+         (only-in "latex-properties.rkt"
+                  command-extras?
+                  command-extras-arguments)
          racket/class
          racket/port
          racket/list
@@ -271,17 +274,20 @@
               (cond
                 [(paragraph? pre) (do-render-paragraph pre d ri #t)]
                 [(nested-flow? pre) (do-render-nested-flow pre d ri #f #t)]))
-            (printf "#align(center)[#text(1.8em, weight: \"bold\")[")
+            (printf "#Stitle(title: [")
             (render-content title-content d ri)
-            (printf "]]\n")
+            (printf "]")
             (unless (equal? vers "")
-              (printf "#align(center)[#text(1.1em)[Version ~a]]\n" (typst-escape vers)))
+              (printf ",\n version: SVersion[~a]" (typst-escape vers)))
+            (printf ",\n authors: (")
             (for ([auth (in-list auths)])
-              (printf "#align(center)[")
+              (printf "[")
               (do-render-paragraph auth d ri #t)
-              (printf "]\n"))
+              (printf "],"))
+            (printf ")")
             (when date
-              (printf "#align(center)[~a]\n" (typst-escape date)))
+              (printf ",\n date: [~a]" (typst-escape date)))
+            (printf ")")
             (newline)))
         (render-part d ri)
         ;; Add anchors for any referenced-but-never-emitted labels, so
@@ -298,7 +304,9 @@
     (define/override (render-part-content d ri)
       (define number (collected-info-number (part-collected-info d ri)))
       (define depth (number-depth number))
-      (define hidden? (or (part-style? d 'hidden) (zero? depth)))
+      (define hidden? (or (and (part-style? d 'hidden)
+                               (equal? (content->string (part-title-content d)) ""))
+                          (zero? depth)))
       (cond
         [hidden?
          ;; No heading, but emit anchors so that links to this part work:
@@ -306,12 +314,20 @@
            (emit-anchor (t-encode (add-current-tag-prefix (tag-key t ri))))
            (newline))]
         [else
-         (printf "~a " (make-string depth #\=))
+         (printf "#Sheading(depth: ~a~a~a)["
+                 depth
+                 (if (part-style? d 'toc-hidden)
+                     ", outlined: false"
+                     "")
+                 (if (part-style? d 'hidden)
+                     ", hidden: true"
+                     ""))
          (let ([s (format-number number '() #t)])
            (unless (null? s)
-             (printf "~a~a" (car s) (if (part-title-content d) " " ""))))
+             (printf "~a~a" (typst-escape (car s)) (if (part-title-content d) " " ""))))
          (when (part-title-content d)
            (render-content (part-title-content d) d ri))
+         (printf "]\n")
          ;; Only one label can attach to the heading; emit any others
          ;; as invisible anchors:
          (for ([t (part-tags d)]
@@ -495,7 +511,26 @@
         [(eq? sn 'newline)
          (display "#linebreak()")
          null]
-        [(string? sn) (wrap (string-append "#" sn "[") "]")]
+        [(string? sn)
+         (cond
+           [(multiarg-element? e)
+            (printf "#~a" sn)
+            (for ([l (in-list (multiarg-element-contents e))])
+              (printf "[")
+              (render-content l part ri)
+              (printf "]"))
+            null]
+           [else
+            (begin0
+              (wrap (string-append "#" sn "[") "]")
+              (cond
+                [(findf command-extras? (let ([s (content-style e)])
+                                          (if (style? s)
+                                              (style-properties s)
+                                              '())))
+                 => (lambda (ce)
+                      (for ([l (in-list (command-extras-arguments ce))])
+                        (printf "[~a]" l)))]))])]
         [else (super render-content e part ri)]))
 
     ;; ----------------------------------------
@@ -583,19 +618,33 @@
       (cond
         [(and (not show-pre?) (memq 'pretitle props))
          null]
-        [(memq (style-name s) '(inset code-inset vertical-inset))
-         (printf "#block(inset: (left: 1em))[\n")
-         (begin0
-           (super render-nested-flow i part ri starting-item?)
-           (printf "\n]")
-           (newline))]
-        [(string? (style-name s))
-         (printf "#~a[" (style-name s))
-         (begin0
-           (super render-nested-flow i part ri starting-item?)
-           (printf "]"))]
         [else
-         (super render-nested-flow i part ri starting-item?)]))
+         (define sn (style-name s))
+         (define block-name
+           (cond
+             [(eq? sn 'inset) "SInset"]
+             [(eq? sn 'code-inset) "SCodeInset"]
+             [(eq? sn 'vertical-inset) "SVerticalInset"]
+             [(string? sn) sn]
+             [else #f]))
+         (cond
+           [block-name
+            (cond
+              [(memq 'multicommand props)
+               (printf "#~a" block-name)
+               (for/list ([b (in-list (nested-flow-blocks i))]
+                          [pos (in-naturals)])
+                 (printf "[")
+                 (render-block b part ri starting-item?)
+                 (printf "]"))]
+              [else
+               (printf "#~a[" block-name)
+               (begin0
+                 (super render-nested-flow i part ri starting-item?)
+                 (printf "]")
+                 (newline))])]
+           [else
+            (super render-nested-flow i part ri starting-item?)])]))
 
     ;; ----------------------------------------
     ;; tables
@@ -606,14 +655,12 @@
         [(or (null? flowss) (null? (car flowss))) null]
         [else
          ;; Backgrounds as in "racket.css":
-         (define wrap-fill
+         (define table-function
            (let ([s-name (style-name (table-style i))])
              (cond
-               [(eq? s-name 'boxed) "#E8E8FF"]
-               [(equal? s-name "defmodule") "#F5F5DC"]
-               [else #f])))
-         (when wrap-fill
-           (printf "#block(width: 100%, fill: rgb(\"~a\"), inset: 3pt)[\n" wrap-fill))
+               [(eq? s-name 'boxed) "Sboxed"]
+               [(string? s-name) s-name]
+               [else "Stable"])))
          (define cell-styless (extract-table-cell-styles i))
          ;; For a nested table in a `top'-aligned cell, remove the
          ;; top inset of the table's first row, so that the top
@@ -622,13 +669,11 @@
          ;; approximates the way that a `tabular[t]' environment in
          ;; Latex output aligns on the first row's baseline:
          (define nested? (in-table-cell?))
-         (printf "#table(\n")
+         (define nonbreakable? (memq 'block (style-properties (table-style i))))
+         (when nonbreakable? (printf "#block(breakable: false)["))
+         (printf "#~a(\n" table-function)
          (indent)
          (printf "  columns: ~a,\n" (length (car flowss)))
-         (indent)
-         (printf "  stroke: none,\n")
-         (indent)
-         (printf "  inset: (x: 0pt, y: 0.25em),\n")
          (for ([row (in-list flowss)]
                [styles (in-list cell-styless)]
                [row-i (in-naturals)])
@@ -677,9 +722,12 @@
                         (if (null? sides)
                             null
                             (list (format "stroke: (~a)" (string-join sides ", "))))])))
+                  (display (if (string? (style-name (car styles)))
+                               (style-name (car styles))
+                               "table.cell"))
                   (if (null? opts)
                       (printf "[")
-                      (printf "table.cell(~a)[" (string-join opts ", ")))
+                      (printf "(~a)[" (string-join opts ", ")))
                   (define o (open-output-string))
                   (parameterize ([current-indent 0]
                                  [current-output-port o]
@@ -695,10 +743,8 @@
            (newline))
          (indent)
          (printf ")")
+         (when nonbreakable? (printf "]"))
          (newline)
-         (when wrap-fill
-           (printf "]")
-           (newline))
          null]))
 
     ;; ----------------------------------------
@@ -724,13 +770,7 @@
                     [(nbsp) "\uA0"]
                     [else (error 'typst-render "unknown element symbol: ~e" i)]))]
         [(string? i)
-         (let* ([s (if (preserving-spaces?)
-                       i ; verbatim: no quote or dash substitutions
-                       (regexp-replace** i '((#rx"---" . "—")
-                                             (#rx"--" . "–")
-                                             (#rx"``" . "“")
-                                             (#rx"''" . "”")
-                                             (#rx"'" . "’"))))]
+         (let* ([s i]
                 [s (typst-escape s)]
                 [s (if (preserving-spaces?)
                        (regexp-replace* #rx" " s "\uA0")
