@@ -27,13 +27,28 @@
   }
 }
 
-#let Stt(body) = text(font: ("DejaVu Sans Mono",), size: 0.9em, body)
+#let SttProc = state("stt", content => text(font: ("DejaVu Sans Mono",), size: 0.9em, content))
 
-#let refpara(e) = e
+#let Stt(content) = context { SttProc.get()(content) }
+
+#let refpara(body) = context place(
+  top + left,
+  dx: 100% + 1em,                    // push past the text column into the margin
+  dy: here().position().y - 1in,     // line up with this point (subtract top margin)
+  box(width: 0.8in, text(size: 8pt, fill: luma(40%), body)),
+)
+
 #let refelem(e) = e
 #let refcolumn(e) = e
 #let refcontent(e) = e
-#let refparaleft(e) = e
+
+#let refparaleft(body) = context place(
+  top + left,
+  dx: -0.9in,                     // push past the text column into the margin
+  dy: here().position().y - 1in,  // line up with this point (subtract top margin)
+  box(width: 0.8in, text(size: 8pt, fill: luma(40%), body)),
+)
+
 #let refelemleft(e) = e
 #let refcolumnleft(e) = e
 #let reffootnote(e) = footnote(e)

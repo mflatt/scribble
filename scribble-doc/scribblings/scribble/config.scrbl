@@ -9,6 +9,7 @@
 @(define (fake-title . str) (apply bold str))
 
 @(define (css s) (tt s))
+@(define (typst . s) (tt s))
 @(define spacer @hspace[1])
 @(define baseline (style #f '(baseline)))
 @(define-syntax-rule (css-table [name desc] ...)
@@ -746,10 +747,43 @@ characters.}
 @section[#:tag "builtin-typ"]{Typst Functions}
 
 The @filepath{scribble.typ} Typst configuration defines several
-functions that you can shadow to adjust the output style:
+functions and state objects that you can shadow to adjust the output
+style:
 
 @itemlist[
 
+ @item{@typst{Stitle(title: [], version: none, authors: none, date:
+ none)} --- for the title of a document.}
+
+ @item{@typst{SVersion(version)} --- for a version, adding
+ ``Version'' as a prefix to the given version content.}
+
+ @item{@typst{Sheading(depth: none, outlined: true, hidden: false,
+ content)} --- for a section heading at a given depth.}
+
+ @item{@typst{SSubSubSubSection(content)} --- for a @racket[subsubsub*section]}
+
+ @item{@typst{SttProc} state --- a function that takes content and
+ typesets it with a fixed-width font}
+
+ @item{@typst{SInset(body)} --- for a @racket[nested-flow]
+       with the @racket['inset] style name.}
+
+ @item{@typst{SCodeInset(body)} --- for a @racket[nested-flow]
+       with the @racket['code-inset] style name.}
+
+ @item{@typst{SVerticalInset(body)} --- for a @racket[nested-flow]
+       with the @racket['vertical-inset] style name.}
+
+ @item{@typst{Stable(columns: [], ..content)} --- for a @racket[table].}
+
+ @item{@typst{Ssoxed(columns: [], ..content)} --- for a @racket[table]
+ with the @racket['boxed] style.}
+ 
+ @item{@typst{SVerbatim(columns: [], ..content)} --- for a
+ @racket[table] created by @racket[verbatim].}
+
+  
 ]
 
 Additionally, the @filepath{racket.typ} Typst configuration defines
@@ -757,5 +791,17 @@ several functions that you can redefine to adjust the output style of
 Racket code:
 
 @itemlist[
+
+ @item{@typst{RktBlk(columns: [], ..content)} --- for a @racket[table]
+ created by @racket[racketblock].}
+
+ @item{@typst{RktPlain(body)} --- uncolored text within
+ @racket[racket], @racket[racketblock], etc. A number of other
+ functions, such as @typst{RktPn}, are also defined, analogous to the
+ classes listed in @secref["manual-css"].}
+
+ @item{@typst{SColorizeOn} state --- a boolean that determines whether
+ color is used for @racket[racket], @racket[racketblock], etc.
+ content. This state is consulted by functions like @typst{RktPn}.}
 
 ]

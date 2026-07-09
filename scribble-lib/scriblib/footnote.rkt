@@ -87,6 +87,8 @@
                              (cond-element
                               [latex
                                (make-element footnote-content-style target)]
+                              [typst
+                               (make-element footnote-content-style target)]
                               [else
                                null])))))))
 
@@ -106,5 +108,6 @@
           (make-paragraph footnote-block-content-style
                           (cond-element
                            [latex null]
+                           [typst null]
                            [else content])))))))
    null))
